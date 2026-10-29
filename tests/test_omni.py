@@ -233,5 +233,21 @@ class TestOmniDownloader(unittest.TestCase):
         finally:
             bridge.stop()
 
+    def test_09_ffmpeg_missing_detection(self):
+        """Test MediaDownloader emits clear error when FFmpeg is required but missing."""
+        import unittest.mock as mock
+        from core.downloader import DownloadWorker
+
+        failed_signals = []
+        downloader = DownloadWorker("test_task", "https://example.com/audio", "/tmp", quality="mp3")
+        downloader.download_failed.connect(lambda task_id, msg: failed_signals.append((task_id, msg)))
+
+        with mock.patch("shutil.which", return_value=None):
+            downloader.run()
+
+        self.assertEqual(len(failed_signals), 1)
+        self.assertIn("FFmpeg is missing", failed_signals[0][1])
+        self.assertIn("https://ffmpeg.org/download.html", failed_signals[0][1])
+
 if __name__ == "__main__":
     unittest.main()

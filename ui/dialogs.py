@@ -1,4 +1,5 @@
 import os
+import shutil
 import requests
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -296,6 +297,22 @@ class AddDownloadDialog(QDialog):
 
         quality = self.combo_quality.currentData() or "best"
         dest = self.dest_input.text().strip() or get_config("download_dir")
+
+        # Validate FFmpeg requirement for MP3/FLAC and stream merging
+        needs_ffmpeg = quality in ("mp3", "flac") or (isinstance(quality, str) and (quality == "1080p" or quality.endswith("p") or "1080" in quality))
+        if needs_ffmpeg and not shutil.which("ffmpeg"):
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("FFmpeg Required")
+            msg_box.setTextFormat(Qt.TextFormat.RichText)
+            msg_box.setText(
+                "<h3>FFmpeg is required</h3>"
+                "<p>Extracting audio (MP3/FLAC) and merging high-resolution video streams (1080p+) require <b>FFmpeg</b>.</p>"
+                "<p>Please download and install FFmpeg to use this option:<br>"
+                "<a href='https://ffmpeg.org/download.html'>https://ffmpeg.org/download.html</a></p>"
+            )
+            msg_box.exec()
+            return
 
         # Check if playlist with selected items
         if self.media_info and self.media_info.get("is_playlist"):

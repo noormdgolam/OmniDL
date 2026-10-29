@@ -313,6 +313,16 @@ class DownloadWorker(QThread):
         return ydl_opts
 
     def run(self):
+        # Fail early with clear message if FFmpeg is required but missing
+        needs_ffmpeg = self.quality in ("mp3", "flac") or (isinstance(self.quality, str) and (self.quality == "1080p" or self.quality.endswith("p")))
+        if needs_ffmpeg and not shutil.which("ffmpeg"):
+            self.status_changed.emit(self.task_id, "Failed")
+            self.download_failed.emit(
+                self.task_id,
+                "FFmpeg is missing. Audio conversion and stream merging require FFmpeg: https://ffmpeg.org/download.html"
+            )
+            return
+
         max_retries = get_config("auto_retry_count", 3)
         retry_delay = get_config("auto_retry_delay", 5)
 
